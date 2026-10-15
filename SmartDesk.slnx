@@ -6,6 +6,7 @@
     <Project Path="src/SmartDesk.Infrastructure/SmartDesk.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/SmartDesk.Application.Tests/SmartDesk.Application.Tests.csproj" />
     <Project Path="tests/SmartDesk.Domain.Tests/SmartDesk.Domain.Tests.csproj" />
   </Folder>
 </Solution>

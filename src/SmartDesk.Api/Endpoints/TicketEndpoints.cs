@@ -12,9 +12,14 @@ public sealed record CreateTicketRequest(
 
 public static class TicketEndpoints
 {
+    public const string AgentPolicy = "Agente";
+
     public static IEndpointRouteBuilder MapTicketEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/tickets").WithTags("Tickets");
+        // Todo el grupo exige un usuario autenticado (sin token => 401)
+        var group = app.MapGroup("/api/tickets")
+                       .WithTags("Tickets")
+                       .RequireAuthorization();
 
         group.MapPost("/", async (CreateTicketRequest request, TicketService service, CancellationToken ct) =>
         {
@@ -29,13 +34,16 @@ public static class TicketEndpoints
             Guid id, TicketService service, CancellationToken ct) =>
             await service.GetAsync(id, ct) is { } ticket ? TypedResults.Ok(ticket) : TypedResults.NotFound());
 
+        // Cambios de estado: solo agentes (usuario autenticado sin el rol => 403)
         group.MapPost("/{id:guid}/start", async Task<Results<Ok<TicketDto>, NotFound>> (
             Guid id, TicketService service, CancellationToken ct) =>
-            await service.StartAsync(id, ct) is { } ticket ? TypedResults.Ok(ticket) : TypedResults.NotFound());
+            await service.StartAsync(id, ct) is { } ticket ? TypedResults.Ok(ticket) : TypedResults.NotFound())
+            .RequireAuthorization(AgentPolicy);
 
         group.MapPost("/{id:guid}/resolve", async Task<Results<Ok<TicketDto>, NotFound>> (
             Guid id, TicketService service, CancellationToken ct) =>
-            await service.ResolveAsync(id, ct) is { } ticket ? TypedResults.Ok(ticket) : TypedResults.NotFound());
+            await service.ResolveAsync(id, ct) is { } ticket ? TypedResults.Ok(ticket) : TypedResults.NotFound())
+            .RequireAuthorization(AgentPolicy);
 
         return app;
     }

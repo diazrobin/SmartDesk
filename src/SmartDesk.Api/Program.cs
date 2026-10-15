@@ -11,9 +11,16 @@ var connectionString = builder.Configuration.GetConnectionString("SmartDesk")
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(connectionString);
 
-builder.Services.AddProblemDetails();                              // errores en formato estándar
-builder.Services.AddExceptionHandler<DomainExceptionHandler>();    // DomainException -> 409
-builder.Services.AddValidation();                                  // valida [Required], [MaxLength]... (.NET 10)
+// Autenticación: valida tokens JWT (emisor, audiencia y firma se leen de la configuración)
+builder.Services.AddAuthentication().AddJwtBearer();
+
+// Autorización: política "Agente" = el token debe incluir el rol "agente"
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy(TicketEndpoints.AgentPolicy, policy => policy.RequireRole("agente"));
+
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<DomainExceptionHandler>();
+builder.Services.AddValidation();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
@@ -27,7 +34,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapGet("/", () => "SmartDesk API en marcha");
+app.UseAuthentication();   // ¿quién eres?
+app.UseAuthorization();    // ¿qué puedes hacer?
+
+app.MapGet("/", () => "SmartDesk API en marcha");   // pública: sirve como comprobación de vida
 app.MapTicketEndpoints();
 
 app.Run();
