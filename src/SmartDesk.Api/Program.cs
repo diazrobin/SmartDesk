@@ -1,6 +1,8 @@
 ﻿using SmartDesk.Api.Endpoints;
 using SmartDesk.Api.Errors;
+using SmartDesk.Api.Security;
 using SmartDesk.Application;
+using SmartDesk.Application.Abstractions;
 using SmartDesk.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,6 +12,10 @@ var connectionString = builder.Configuration.GetConnectionString("SmartDesk")
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(connectionString);
+
+// Usuario actual: Application solo ve la interfaz; aquí se conecta con el token JWT
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 
 // Autenticación: valida tokens JWT (emisor, audiencia y firma se leen de la configuración)
 builder.Services.AddAuthentication().AddJwtBearer();
@@ -37,7 +43,7 @@ app.UseHttpsRedirection();
 app.UseAuthentication();   // ¿quién eres?
 app.UseAuthorization();    // ¿qué puedes hacer?
 
-app.MapGet("/", () => "SmartDesk API en marcha");   // pública: sirve como comprobación de vida
+app.MapGet("/", () => "SmartDesk API en marcha");
 app.MapTicketEndpoints();
 
 app.Run();

@@ -14,9 +14,11 @@ internal sealed class InMemoryTicketRepository : ITicketRepository
     public Task<Ticket?> GetByIdAsync(Guid id, CancellationToken ct) =>
         Task.FromResult(Items.FirstOrDefault(t => t.Id == id));
 
-    public Task<IReadOnlyList<Ticket>> ListAsync(TicketStatus? status, CancellationToken ct) =>
-        Task.FromResult<IReadOnlyList<Ticket>>(
-            Items.Where(t => status is null || t.Status == status).ToList());
+    public Task<IReadOnlyList<Ticket>> ListAsync(TicketStatus? status, string? createdBy, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<Ticket>>(Items
+            .Where(t => status is null || t.Status == status)
+            .Where(t => createdBy is null || t.CreatedBy == createdBy)
+            .ToList());
 
     public Task SaveChangesAsync(CancellationToken ct)
     {
@@ -24,3 +26,6 @@ internal sealed class InMemoryTicketRepository : ITicketRepository
         return Task.CompletedTask;
     }
 }
+
+/// <summary>Usuario simulado para los tests.</summary>
+internal sealed record FakeCurrentUser(string Id, bool IsAgent) : ICurrentUser;

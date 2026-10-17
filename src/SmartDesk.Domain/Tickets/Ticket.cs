@@ -5,6 +5,7 @@ namespace SmartDesk.Domain.Tickets;
 public sealed class Ticket
 {
     public const int TitleMaxLength = 200;
+    public const int CreatedByMaxLength = 100;
 
     // Constructor privado: EF Core lo usará para materializar,
     // pero el código de negocio está obligado a pasar por Create().
@@ -16,16 +17,20 @@ public sealed class Ticket
     public TicketStatus Status { get; private set; }
     public TicketPriority Priority { get; private set; }
     public string? Category { get; private set; }
+    public string CreatedBy { get; private set; } = string.Empty;
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset? ResolvedAt { get; private set; }
 
-    public static Ticket Create(string title, string description, TimeProvider clock)
+    public static Ticket Create(string title, string description, string createdBy, TimeProvider clock)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
         ArgumentException.ThrowIfNullOrWhiteSpace(description);
+        ArgumentException.ThrowIfNullOrWhiteSpace(createdBy);
 
         if (title.Length > TitleMaxLength)
             throw new DomainException($"El título no puede superar {TitleMaxLength} caracteres.");
+        if (createdBy.Length > CreatedByMaxLength)
+            throw new DomainException($"El identificador del creador no puede superar {CreatedByMaxLength} caracteres.");
 
         return new Ticket
         {
@@ -34,6 +39,7 @@ public sealed class Ticket
             Description = description.Trim(),
             Status = TicketStatus.Open,
             Priority = TicketPriority.Unassigned,
+            CreatedBy = createdBy.Trim(),
             CreatedAt = clock.GetUtcNow()
         };
     }

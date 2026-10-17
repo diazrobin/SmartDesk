@@ -3,12 +3,12 @@ using SmartDesk.Domain.Tickets;
 
 namespace SmartDesk.Application.Tickets;
 
-/// <summary>Casos de uso de tickets: orquesta dominio y persistencia.</summary>
-public sealed class TicketService(ITicketRepository repository, TimeProvider clock)
+/// <summary>Casos de uso de tickets: orquesta dominio, persistencia y visibilidad por usuario.</summary>
+public sealed class TicketService(ITicketRepository repository, ICurrentUser user, TimeProvider clock)
 {
     public async Task<TicketDto> CreateAsync(string title, string description, CancellationToken ct)
     {
-        var ticket = Ticket.Create(title, description, clock);
+        var ticket = Ticket.Create(title, description, user.Id, clock);
         repository.Add(ticket);
         await repository.SaveChangesAsync(ct);
         return TicketDto.FromEntity(ticket);
@@ -17,12 +17,13 @@ public sealed class TicketService(ITicketRepository repository, TimeProvider clo
     public async Task<TicketDto?> GetAsync(Guid id, CancellationToken ct)
     {
         var ticket = await repository.GetByIdAsync(id, ct);
-        return ticket is null ? null : TicketDto.FromEntity(ticket);
+        return ticket is not null && CanSee(ticket) ? TicketDto.FromEntity(ticket) : null;
     }
 
     public async Task<IReadOnlyList<TicketDto>> ListAsync(TicketStatus? status, CancellationToken ct)
     {
-        var tickets = await repository.ListAsync(status, ct);
+        // El filtro por creador se aplica en la consulta SQL, no en memoria
+        var tickets = await repository.ListAsync(status, user.IsAgent ? null : user.Id, ct);
         return tickets.Select(TicketDto.FromEntity).ToList();
     }
 
@@ -32,11 +33,13 @@ public sealed class TicketService(ITicketRepository repository, TimeProvider clo
     public Task<TicketDto?> ResolveAsync(Guid id, CancellationToken ct) =>
         ChangeAsync(id, t => t.Resolve(clock), ct);
 
-    // Patrón común: cargar, aplicar la regla de dominio, guardar. Devuelve null si no existe.
+    // Un ticket ajeno se trata como inexistente: no revelamos que existe
+    private bool CanSee(Ticket ticket) => user.IsAgent || ticket.CreatedBy == user.Id;
+
     private async Task<TicketDto?> ChangeAsync(Guid id, Action<Ticket> change, CancellationToken ct)
     {
         var ticket = await repository.GetByIdAsync(id, ct);
-        if (ticket is null) return null;
+        if (ticket is null || !CanSee(ticket)) return null;
 
         change(ticket);
         await repository.SaveChangesAsync(ct);

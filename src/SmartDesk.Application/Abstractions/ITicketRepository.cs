@@ -7,6 +7,9 @@ public interface ITicketRepository
 {
     void Add(Ticket ticket);
     Task<Ticket?> GetByIdAsync(Guid id, CancellationToken ct);
-    Task<IReadOnlyList<Ticket>> ListAsync(TicketStatus? status, CancellationToken ct);
+
+    /// <param name="createdBy">null = todos los creadores (solo para agentes).</param>
+    Task<IReadOnlyList<Ticket>> ListAsync(TicketStatus? status, string? createdBy, CancellationToken ct);
+
     Task SaveChangesAsync(CancellationToken ct);
 }

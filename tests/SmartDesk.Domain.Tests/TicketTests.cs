@@ -12,17 +12,24 @@ public class TicketTests
     [Fact]
     public void Create_TicketValido_QuedaAbiertoYSinPrioridad()
     {
-        var ticket = Ticket.Create("No funciona el VPN", "Error 809 al conectar", _clock);
+        var ticket = Ticket.Create("No funciona el VPN", "Error 809 al conectar", "ana", _clock);
 
         Assert.Equal(TicketStatus.Open, ticket.Status);
         Assert.Equal(TicketPriority.Unassigned, ticket.Priority);
+        Assert.Equal("ana", ticket.CreatedBy);
         Assert.Equal(_clock.GetUtcNow(), ticket.CreatedAt);
+    }
+
+    [Fact]
+    public void Create_SinCreador_LanzaArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() => Ticket.Create("Título", "Descripción", "  ", _clock));
     }
 
     [Fact]
     public void Resolve_SinEstarEnCurso_LanzaDomainException()
     {
-        var ticket = Ticket.Create("Título", "Descripción", _clock);
+        var ticket = Ticket.Create("Título", "Descripción", "ana", _clock);
 
         Assert.Throws<DomainException>(() => ticket.Resolve(_clock));
     }
@@ -30,7 +37,7 @@ public class TicketTests
     [Fact]
     public void Resolve_FlujoCompleto_RegistraFechaDeResolucion()
     {
-        var ticket = Ticket.Create("Título", "Descripción", _clock);
+        var ticket = Ticket.Create("Título", "Descripción", "ana", _clock);
         ticket.StartProgress();
         _clock.Advance(TimeSpan.FromHours(2));
 

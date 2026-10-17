@@ -25,7 +25,11 @@ internal sealed class TicketConfiguration : IEntityTypeConfiguration<Ticket>
 
         builder.Property(t => t.Category).HasMaxLength(100);
 
-        // Índice para los listados por estado (el filtro más habitual en un helpdesk)
-        builder.HasIndex(t => t.Status);
+        builder.Property(t => t.CreatedBy)
+               .HasMaxLength(Ticket.CreatedByMaxLength)
+               .IsRequired();
+
+        builder.HasIndex(t => t.Status);     // listados por estado
+        builder.HasIndex(t => t.CreatedBy);  // "mis tickets": la consulta más frecuente de un usuario
     }
 }
