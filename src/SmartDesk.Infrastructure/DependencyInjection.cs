@@ -32,6 +32,7 @@ public static class DependencyInjection
         {
             // Sin clave de IA: clasificación por reglas y búsqueda por texto
             services.AddSingleton<ITicketClassifier>(sp => sp.GetRequiredService<KeywordTicketClassifier>());
+            services.AddSingleton<IAnswerGenerator, NoAnswerGenerator>();
             return services;
         }
 
@@ -47,6 +48,8 @@ public static class DependencyInjection
             openAi.GetEmbeddingClient(embeddingModel).AsIEmbeddingGenerator());
 
         services.AddScoped<ITicketClassifier, LlmTicketClassifier>();
+        services.AddScoped<IAnswerGenerator, LlmAnswerGenerator>();
         return services;
     }
 }
+

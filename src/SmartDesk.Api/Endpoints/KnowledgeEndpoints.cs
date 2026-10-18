@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Http.HttpResults;
 using SmartDesk.Application.Abstractions;
+using SmartDesk.Application.Assistance;
 using SmartDesk.Application.Knowledge;
 using SmartDesk.Application.Tickets;
 using SmartDesk.Domain.Knowledge;
@@ -36,7 +37,13 @@ public static class KnowledgeEndpoints
 
             return TypedResults.Ok(await kb.SearchAsync($"{ticket.Title}\n{ticket.Description}", 3, ct));
         }).WithTags("Tickets").RequireAuthorization();
+        // RAG completo: artículos relevantes + respuesta redactada por la IA
+        app.MapGet("/api/tickets/{id:guid}/assist", async Task<Results<Ok<AssistResponse>, NotFound>> (
+            Guid id, AssistanceService assistance, CancellationToken ct) =>
+            await assistance.AssistAsync(id, ct) is { } result ? TypedResults.Ok(result) : TypedResults.NotFound())
+            .WithTags("Tickets").RequireAuthorization();
 
         return app;
     }
 }
+
