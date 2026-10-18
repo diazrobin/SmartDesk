@@ -15,7 +15,7 @@ public class TicketServiceTests
     private readonly FakeTimeProvider _clock = new(new DateTimeOffset(2026, 10, 15, 9, 0, 0, TimeSpan.Zero));
 
     // Cada test elige "quién" ejecuta la operación; el repositorio es compartido
-    private TicketService As(ICurrentUser user) => new(_repo, user, _clock);
+    private TicketService As(ICurrentUser user) => new(_repo, user, new FakeTicketClassifier(), _clock);
 
     [Fact]
     public async Task CreateAsync_GuardaElTicketConSuCreador()

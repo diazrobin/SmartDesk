@@ -11,7 +11,7 @@ var connectionString = builder.Configuration.GetConnectionString("SmartDesk")
     ?? throw new InvalidOperationException("Falta la cadena de conexión 'SmartDesk'.");
 
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(connectionString);
+builder.Services.AddInfrastructure(connectionString, builder.Configuration.GetSection("Ai"));
 
 // Usuario actual: Application solo ve la interfaz; aquí se conecta con el token JWT
 builder.Services.AddHttpContextAccessor();
