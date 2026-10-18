@@ -12,7 +12,16 @@ function Start-Api {
     Stop-Api
     $cmd = "cd '$global:SmartDeskRoot'; dotnet run --project src/SmartDesk.Api --urls http://localhost:5080"
     Start-Process powershell -ArgumentList '-NoExit', '-Command', $cmd
-    Write-Host "API arrancando en otra ventana. Espera a ver 'Now listening on' antes de hacer peticiones." -ForegroundColor Cyan
+    Write-Host "Arrancando la API en otra ventana..." -ForegroundColor Cyan
+    for ($i = 0; $i -lt 90; $i++) {
+        Start-Sleep -Seconds 1
+        try {
+            Invoke-RestMethod "http://localhost:5080/" -TimeoutSec 2 | Out-Null
+            Write-Host "API lista ($($i + 1) s)." -ForegroundColor Green
+            return
+        } catch { }
+    }
+    Write-Host "La API no respondió en 90 s. Revisa su ventana por si hay un error." -ForegroundColor Red
 }
 
 function Get-AuthHeader([string]$Name, [string]$Role) {
@@ -36,14 +45,16 @@ function Show-HttpError([scriptblock]$Request) {
     }
 }
 
-Write-Host "Utilidades cargadas: Start-Api, Stop-Api, Get-AuthHeader, New-Ticket, Show-HttpError" -ForegroundColor Green
-
 function Set-GeminiKey {
-    Read-Host "AHORA: ve a AI Studio, copia tu clave, vuelve a esta ventana y pulsa Enter" | Out-Null
+    Write-Host ""
+    Write-Host "  1. Ve al navegador, a https://aistudio.google.com/apikey" -ForegroundColor Yellow
+    Write-Host "  2. Pulsa el boton de COPIAR de tu clave" -ForegroundColor Yellow
+    Write-Host "  3. Vuelve aqui y pulsa Enter (NO pegues nada)" -ForegroundColor Yellow
+    Read-Host "Pulsa Enter cuando hayas copiado la clave" | Out-Null
     $k = "$(Get-Clipboard -Raw)".Trim()
 
     if ($k.Length -lt 20 -or $k.Contains(" ")) {
-        Write-Host "El portapapeles no parece contener una clave (longitud $($k.Length)). Cópiala de nuevo y repite Set-GeminiKey." -ForegroundColor Red
+        Write-Host "El portapapeles no contiene una clave (longitud $($k.Length)). Repite Set-GeminiKey y copia la clave en el paso 2." -ForegroundColor Red
         return
     }
 
@@ -51,13 +62,13 @@ function Set-GeminiKey {
         $models = (Invoke-RestMethod "https://generativelanguage.googleapis.com/v1beta/openai/models" -Headers @{ Authorization = "Bearer $k" }).data.id
     }
     catch {
-        Write-Host "Google rechazó la clave: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Google rechazo la clave: $($_.Exception.Message)" -ForegroundColor Red
         return
     }
 
     dotnet user-secrets set "Ai:ApiKey" $k --project "$global:SmartDeskRoot\src\SmartDesk.Api" | Out-Null
-    Set-Clipboard -Value " "   # no dejamos la clave en el portapapeles
-    Write-Host "Clave válida y guardada (empieza por $($k.Substring(0,4))..., longitud $($k.Length))." -ForegroundColor Green
-    Write-Host "Modelos 'flash' disponibles:" -ForegroundColor Green
-    $models | Where-Object { $_ -like "*flash*" }
+    Set-Clipboard -Value " "
+    Write-Host "Clave valida y guardada (empieza por $($k.Substring(0,4))..., longitud $($k.Length), $($models.Count) modelos disponibles)." -ForegroundColor Green
 }
+
+Write-Host "Utilidades cargadas: Start-Api, Stop-Api, Get-AuthHeader, New-Ticket, Show-HttpError, Set-GeminiKey" -ForegroundColor Green
