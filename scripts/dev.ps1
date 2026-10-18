@@ -37,3 +37,27 @@ function Show-HttpError([scriptblock]$Request) {
 }
 
 Write-Host "Utilidades cargadas: Start-Api, Stop-Api, Get-AuthHeader, New-Ticket, Show-HttpError" -ForegroundColor Green
+
+function Set-GeminiKey {
+    Read-Host "AHORA: ve a AI Studio, copia tu clave, vuelve a esta ventana y pulsa Enter" | Out-Null
+    $k = "$(Get-Clipboard -Raw)".Trim()
+
+    if ($k.Length -lt 20 -or $k.Contains(" ")) {
+        Write-Host "El portapapeles no parece contener una clave (longitud $($k.Length)). Cópiala de nuevo y repite Set-GeminiKey." -ForegroundColor Red
+        return
+    }
+
+    try {
+        $models = (Invoke-RestMethod "https://generativelanguage.googleapis.com/v1beta/openai/models" -Headers @{ Authorization = "Bearer $k" }).data.id
+    }
+    catch {
+        Write-Host "Google rechazó la clave: $($_.Exception.Message)" -ForegroundColor Red
+        return
+    }
+
+    dotnet user-secrets set "Ai:ApiKey" $k --project "$global:SmartDeskRoot\src\SmartDesk.Api" | Out-Null
+    Set-Clipboard -Value " "   # no dejamos la clave en el portapapeles
+    Write-Host "Clave válida y guardada (empieza por $($k.Substring(0,4))..., longitud $($k.Length))." -ForegroundColor Green
+    Write-Host "Modelos 'flash' disponibles:" -ForegroundColor Green
+    $models | Where-Object { $_ -like "*flash*" }
+}
