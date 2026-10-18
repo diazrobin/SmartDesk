@@ -45,5 +45,6 @@ app.UseAuthorization();    // ¿qué puedes hacer?
 
 app.MapGet("/", () => "SmartDesk API en marcha");
 app.MapTicketEndpoints();
+app.MapKnowledgeEndpoints();
 
 app.Run();

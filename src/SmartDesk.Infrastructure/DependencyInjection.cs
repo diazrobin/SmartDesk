@@ -4,8 +4,10 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OpenAI;
+using Pgvector.EntityFrameworkCore;
 using SmartDesk.Application.Abstractions;
 using SmartDesk.Infrastructure.Ai;
+using SmartDesk.Infrastructure.Knowledge;
 using SmartDesk.Infrastructure.Persistence;
 using SmartDesk.Infrastructure.Persistence.Repositories;
 
@@ -17,8 +19,10 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services, string connectionString, IConfigurationSection ai)
     {
-        services.AddDbContext<SmartDeskDbContext>(options => options.UseNpgsql(connectionString));
+        services.AddDbContext<SmartDeskDbContext>(options =>
+            options.UseNpgsql(connectionString, npgsql => npgsql.UseVector()));
         services.AddScoped<ITicketRepository, TicketRepository>();
+        services.AddScoped<IKnowledgeBase, PgKnowledgeBase>();
         services.AddSingleton(TimeProvider.System);
 
         services.AddSingleton<KeywordTicketClassifier>();
@@ -26,23 +30,23 @@ public static class DependencyInjection
         var apiKey = ai["ApiKey"];
         if (string.IsNullOrWhiteSpace(apiKey))
         {
-            // Sin clave de IA configurada: solo reglas por palabras clave
+            // Sin clave de IA: clasificación por reglas y búsqueda por texto
             services.AddSingleton<ITicketClassifier>(sp => sp.GetRequiredService<KeywordTicketClassifier>());
-        }
-        else
-        {
-            var endpoint = ai["Endpoint"] ?? throw new InvalidOperationException("Falta Ai:Endpoint.");
-            var model    = ai["Model"]    ?? throw new InvalidOperationException("Falta Ai:Model.");
-
-            // Cualquier proveedor compatible con OpenAI (Gemini, Azure OpenAI, OpenAI...): solo cambia la configuración
-            services.AddChatClient(_ =>
-                new OpenAIClient(new ApiKeyCredential(apiKey), new OpenAIClientOptions { Endpoint = new Uri(endpoint) })
-                    .GetChatClient(model)
-                    .AsIChatClient());
-
-            services.AddScoped<ITicketClassifier, LlmTicketClassifier>();
+            return services;
         }
 
+        var endpoint       = ai["Endpoint"] ?? throw new InvalidOperationException("Falta Ai:Endpoint.");
+        var chatModel      = ai["Model"]    ?? throw new InvalidOperationException("Falta Ai:Model.");
+        var embeddingModel = ai["EmbeddingModel"] ?? "gemini-embedding-001";
+
+        // Un único cliente compatible con OpenAI para chat y embeddings
+        var openAi = new OpenAIClient(new ApiKeyCredential(apiKey), new OpenAIClientOptions { Endpoint = new Uri(endpoint) });
+
+        services.AddChatClient(_ => openAi.GetChatClient(chatModel).AsIChatClient());
+        services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(_ =>
+            openAi.GetEmbeddingClient(embeddingModel).AsIEmbeddingGenerator());
+
+        services.AddScoped<ITicketClassifier, LlmTicketClassifier>();
         return services;
     }
 }
