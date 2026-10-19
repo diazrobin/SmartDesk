@@ -12,6 +12,7 @@ var connectionString = builder.Configuration.GetConnectionString("SmartDesk")
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(connectionString, builder.Configuration.GetSection("Ai"));
+builder.Services.AddAnswerCache(builder.Configuration.GetConnectionString("Redis"));
 
 // Usuario actual: Application solo ve la interfaz; aquí se conecta con el token JWT
 builder.Services.AddHttpContextAccessor();
@@ -48,3 +49,4 @@ app.MapTicketEndpoints();
 app.MapKnowledgeEndpoints();
 
 app.Run();
+
