@@ -39,7 +39,10 @@ public sealed class AssistanceService(TicketService tickets, IKnowledgeBase know
             : await answers.GenerateAsync(ticket.Title, ticket.Description, relevant, ct);
 
         var response = new AssistResponse(answer, relevant);
-        await cache.SetAsync(key, response, CacheTtl, ct);
+        // Un fallo de la IA no debe fijarse en caché durante una hora
+        if (answer is not null || relevant.Count == 0)
+            await cache.SetAsync(key, response, CacheTtl, ct);
         return response;
     }
 }
+
