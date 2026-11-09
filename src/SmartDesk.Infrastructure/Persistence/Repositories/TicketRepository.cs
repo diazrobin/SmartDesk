@@ -11,23 +11,10 @@ internal sealed class TicketRepository(SmartDeskDbContext db) : ITicketRepositor
     public Task<Ticket?> GetByIdAsync(Guid id, CancellationToken ct) =>
         db.Tickets.FirstOrDefaultAsync(t => t.Id == id, ct);
 
-    public async Task<IReadOnlyList<Ticket>> ListAsync(TicketStatus? status, string? createdBy, CancellationToken ct)
-    {
-        // AsNoTracking: solo lectura, EF no vigila cambios => menos memoria y más rápido
-        var query = db.Tickets.AsNoTracking();
-
-        if (status is not null)
-            query = query.Where(t => t.Status == status);
-
-        if (createdBy is not null)
-            query = query.Where(t => t.CreatedBy == createdBy);
-
-        return await query.OrderByDescending(t => t.CreatedAt).ToListAsync(ct);
-    }
-
     public async Task<(IReadOnlyList<Ticket> Items, int TotalCount)> PageAsync(
         TicketStatus? status, string? createdBy, int page, int pageSize, CancellationToken ct)
     {
+        // AsNoTracking: solo lectura, EF no vigila cambios => menos memoria y más rápido
         var query = db.Tickets.AsNoTracking();
 
         if (status is not null)

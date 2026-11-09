@@ -14,12 +14,6 @@ internal sealed class InMemoryTicketRepository : ITicketRepository
     public Task<Ticket?> GetByIdAsync(Guid id, CancellationToken ct) =>
         Task.FromResult(Items.FirstOrDefault(t => t.Id == id));
 
-    public Task<IReadOnlyList<Ticket>> ListAsync(TicketStatus? status, string? createdBy, CancellationToken ct) =>
-        Task.FromResult<IReadOnlyList<Ticket>>(Items
-            .Where(t => status is null || t.Status == status)
-            .Where(t => createdBy is null || t.CreatedBy == createdBy)
-            .ToList());
-
     public Task<(IReadOnlyList<Ticket> Items, int TotalCount)> PageAsync(
         TicketStatus? status, string? createdBy, int page, int pageSize, CancellationToken ct)
     {
@@ -30,8 +24,8 @@ internal sealed class InMemoryTicketRepository : ITicketRepository
             .ThenByDescending(t => t.Id)
             .ToList();
 
-        var page_ = filtered.Skip((page - 1) * pageSize).Take(pageSize).ToList();
-        return Task.FromResult<(IReadOnlyList<Ticket> Items, int TotalCount)>((page_, filtered.Count));
+        var pagina = filtered.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+        return Task.FromResult<(IReadOnlyList<Ticket> Items, int TotalCount)>((pagina, filtered.Count));
     }
 
     public Task SaveChangesAsync(CancellationToken ct)

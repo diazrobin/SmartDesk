@@ -29,12 +29,6 @@ public sealed class TicketService(
         return ticket is not null && CanSee(ticket) ? TicketDto.FromEntity(ticket) : null;
     }
 
-    public async Task<IReadOnlyList<TicketDto>> ListAsync(TicketStatus? status, CancellationToken ct)
-    {
-        var tickets = await repository.ListAsync(status, user.IsAgent ? null : user.Id, ct);
-        return tickets.Select(TicketDto.FromEntity).ToList();
-    }
-
     /// <summary>Página de tickets visibles para el usuario actual. Los límites se validan en la API.</summary>
     public async Task<PagedResult<TicketDto>> PageAsync(TicketStatus? status, int page, int pageSize, CancellationToken ct)
     {

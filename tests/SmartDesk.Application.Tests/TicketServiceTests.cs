@@ -47,26 +47,28 @@ public class TicketServiceTests
     }
 
     [Fact]
-    public async Task ListAsync_Usuario_SoloVeSusTickets()
+    public async Task PageAsync_Usuario_SoloVeSusTickets()
     {
         await As(Ana).CreateAsync("De Ana", "x", CancellationToken.None);
         await As(Marta).CreateAsync("De Marta", "x", CancellationToken.None);
 
-        var lista = await As(Ana).ListAsync(null, CancellationToken.None);
+        var pagina = await As(Ana).PageAsync(null, 1, 20, CancellationToken.None);
 
-        var unico = Assert.Single(lista);
+        var unico = Assert.Single(pagina.Items);
         Assert.Equal("ana", unico.CreatedBy);
+        Assert.Equal(1, pagina.TotalCount);
     }
 
     [Fact]
-    public async Task ListAsync_Agente_VeTodos()
+    public async Task PageAsync_Agente_VeTodos()
     {
         await As(Ana).CreateAsync("De Ana", "x", CancellationToken.None);
         await As(Marta).CreateAsync("De Marta", "x", CancellationToken.None);
 
-        var lista = await As(Luis).ListAsync(null, CancellationToken.None);
+        var pagina = await As(Luis).PageAsync(null, 1, 20, CancellationToken.None);
 
-        Assert.Equal(2, lista.Count);
+        Assert.Equal(2, pagina.TotalCount);
+        Assert.Equal(2, pagina.Items.Count);
     }
 
     [Fact]
