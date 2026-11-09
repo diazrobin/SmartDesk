@@ -1,4 +1,5 @@
 ﻿using System.ClientModel;
+using System.ClientModel.Primitives;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
@@ -30,26 +31,36 @@ public static class DependencyInjection
         var apiKey = ai["ApiKey"];
         if (string.IsNullOrWhiteSpace(apiKey))
         {
-            // Sin clave de IA: clasificación por reglas y búsqueda por texto
+            // Sin clave de IA: clasificación por reglas, sin respuesta redactada y búsqueda por texto
             services.AddSingleton<ITicketClassifier>(sp => sp.GetRequiredService<KeywordTicketClassifier>());
             services.AddSingleton<IAnswerGenerator, NoAnswerGenerator>();
             return services;
         }
 
-        var endpoint       = ai["Endpoint"] ?? throw new InvalidOperationException("Falta Ai:Endpoint.");
-        var chatModel      = ai["Model"]    ?? throw new InvalidOperationException("Falta Ai:Model.");
+        var endpoint       = ai["Endpoint"]       ?? throw new InvalidOperationException("Falta Ai:Endpoint.");
+        var chatModel      = ai["Model"]          ?? throw new InvalidOperationException("Falta Ai:Model.");
         var embeddingModel = ai["EmbeddingModel"] ?? "gemini-embedding-001";
 
-        // Un único cliente compatible con OpenAI para chat y embeddings
-        var openAi = new OpenAIClient(new ApiKeyCredential(apiKey), new OpenAIClientOptions { Endpoint = new Uri(endpoint) });
+        // Cliente HTTP con reintentos con espera exponencial, timeouts y circuit breaker (fase 7C)
+        services.AddHttpClient("gemini").AddStandardResilienceHandler();
 
-        services.AddChatClient(_ => openAi.GetChatClient(chatModel).AsIChatClient());
-        services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(_ =>
-            openAi.GetEmbeddingClient(embeddingModel).AsIEmbeddingGenerator());
+        // Un único cliente compatible con OpenAI para chat y embeddings
+        services.AddSingleton(sp => new OpenAIClient(
+            new ApiKeyCredential(apiKey),
+            new OpenAIClientOptions
+            {
+                Endpoint = new Uri(endpoint),
+                Transport = new HttpClientPipelineTransport(sp.GetRequiredService<IHttpClientFactory>().CreateClient("gemini")),
+                // Los reintentos los gestiona el handler de resiliencia: evitamos reintentar dos veces
+                RetryPolicy = new ClientRetryPolicy(maxRetries: 0)
+            }));
+
+        services.AddChatClient(sp => sp.GetRequiredService<OpenAIClient>().GetChatClient(chatModel).AsIChatClient());
+        services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(sp =>
+            sp.GetRequiredService<OpenAIClient>().GetEmbeddingClient(embeddingModel).AsIEmbeddingGenerator());
 
         services.AddScoped<ITicketClassifier, LlmTicketClassifier>();
         services.AddScoped<IAnswerGenerator, LlmAnswerGenerator>();
         return services;
     }
 }
-

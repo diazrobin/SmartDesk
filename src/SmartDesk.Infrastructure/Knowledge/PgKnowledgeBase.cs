@@ -11,7 +11,7 @@ using SmartDesk.Infrastructure.Persistence.Configurations;
 
 namespace SmartDesk.Infrastructure.Knowledge;
 
-/// <summary>Base de conocimiento en PostgreSQL. Con embeddings busca por significado; sin ellos, por texto.</summary>
+/// <summary>Base de conocimiento en PostgreSQL. Con IA busca por significado; sin IA, por texto. Si la IA falla, lanza AiUnavailableException.</summary>
 internal sealed class PgKnowledgeBase(
     SmartDeskDbContext db,
     TimeProvider clock,
@@ -25,8 +25,8 @@ internal sealed class PgKnowledgeBase(
         var article = KnowledgeArticle.Create(title, content, clock);
         db.KnowledgeArticles.Add(article);
 
-        // El vector representa el significado de título + contenido
-        var vector = await TryEmbedAsync($"{article.Title}\n{article.Content}", ct);
+        // Si la IA falla, no se guarda el artículo: evitamos artículos invisibles para la búsqueda semántica
+        var vector = await EmbedAsync($"{article.Title}\n{article.Content}", ct);
         if (vector is not null)
             db.Entry(article).Property(Emb).CurrentValue = vector;
 
@@ -36,11 +36,11 @@ internal sealed class PgKnowledgeBase(
 
     public async Task<IReadOnlyList<KnowledgeMatch>> SearchAsync(string query, int top, CancellationToken ct)
     {
-        var vector = await TryEmbedAsync(query, ct);
+        var vector = await EmbedAsync(query, ct);
 
         if (vector is null)
         {
-            // Respaldo sin IA: búsqueda de texto simple
+            // Sin IA configurada: búsqueda de texto simple
             var term = $"%{query.Trim()}%";
             return await db.KnowledgeArticles.AsNoTracking()
                 .Where(a => EF.Functions.ILike(a.Title, term) || EF.Functions.ILike(a.Content, term))
@@ -49,7 +49,7 @@ internal sealed class PgKnowledgeBase(
                 .ToListAsync(ct);
         }
 
-        // Distancia coseno: 0 = mismo significado. PostgreSQL la calcula con el operador <=> de pgvector
+        // Distancia coseno: 0 = mismo significado
         return await db.KnowledgeArticles.AsNoTracking()
             .Where(a => EF.Property<Vector?>(a, Emb) != null)
             .Select(a => new { a.Id, a.Title, a.Content, Distance = EF.Property<Vector>(a, Emb).CosineDistance(vector) })
@@ -59,9 +59,11 @@ internal sealed class PgKnowledgeBase(
             .ToListAsync(ct);
     }
 
-    private async Task<Vector?> TryEmbedAsync(string text, CancellationToken ct)
+    /// <returns>El vector, o null si la IA no está configurada.</returns>
+    private async Task<Vector?> EmbedAsync(string text, CancellationToken ct)
     {
         if (embeddings is null) return null;
+
         try
         {
             var values = await embeddings.GenerateVectorAsync(text, cancellationToken: ct);
@@ -69,8 +71,8 @@ internal sealed class PgKnowledgeBase(
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {
-            logger.LogWarning(ex, "No se pudo generar el embedding; se usa búsqueda de texto.");
-            return null;
+            logger.LogWarning(ex, "No se pudo generar el embedding.");
+            throw new AiUnavailableException("La IA no está disponible para generar embeddings.", ex);
         }
     }
 }

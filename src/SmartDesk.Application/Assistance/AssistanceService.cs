@@ -1,15 +1,20 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json.Serialization;
 using SmartDesk.Application.Abstractions;
 using SmartDesk.Application.Knowledge;
 using SmartDesk.Application.Tickets;
 
 namespace SmartDesk.Application.Assistance;
 
-/// <summary>Respuesta sugerida y artículos en los que se basa.</summary>
-public sealed record AssistResponse(string? Answer, IReadOnlyList<KnowledgeMatch> Sources);
+/// <summary>Distingue "no hay contenido" de "la IA falló".</summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum AnswerStatus { Generated, NoRelevantSources, Unavailable }
 
-/// <summary>RAG con caché: busca artículos relevantes para un ticket y pide a la IA una respuesta basada solo en ellos.</summary>
+/// <summary>Respuesta sugerida, artículos en los que se basa y estado de la generación.</summary>
+public sealed record AssistResponse(string? Answer, IReadOnlyList<KnowledgeMatch> Sources, AnswerStatus Status);
+
+/// <summary>RAG con caché y estado explícito: solo se cachean resultados completos, nunca fallos.</summary>
 public sealed class AssistanceService(TicketService tickets, IKnowledgeBase knowledge, IAnswerGenerator answers, IAssistCache cache)
 {
     /// <summary>Por debajo de este parecido, el artículo no se considera relevante (valor inicial, pendiente de calibrar).</summary>
@@ -25,26 +30,46 @@ public sealed class AssistanceService(TicketService tickets, IKnowledgeBase know
         if (ticket is null) return null;
 
         var query = $"{ticket.Title}\n{ticket.Description}";
-
-        // La respuesta depende solo del texto, no del usuario: por eso la clave es el hash del texto
         var key = "assist:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(query)));
         if (await cache.GetAsync(key, ct) is { } cached) return cached;
 
-        var matches = await knowledge.SearchAsync(query, 3, ct);
+        // 1. Búsqueda: si la IA falla, no hay "sin resultados" real, así que no se cachea
+        IReadOnlyList<KnowledgeMatch> matches;
+        try
+        {
+            matches = await knowledge.SearchAsync(query, 3, ct);
+        }
+        catch (AiUnavailableException)
+        {
+            return new AssistResponse(null, [], AnswerStatus.Unavailable);
+        }
+
         var relevant = matches.Where(m => m.Similarity >= MinSimilarity).ToList();
 
-        // Sin contexto fiable no llamamos a la IA: evitamos respuestas inventadas
-        var answer = relevant.Count == 0
-            ? null
-            : await answers.GenerateAsync(ticket.Title, ticket.Description, relevant, ct);
+        // 2. Sin contexto fiable no llamamos a la IA: evitamos respuestas inventadas
+        if (relevant.Count == 0)
+        {
+            var empty = new AssistResponse(null, relevant, AnswerStatus.NoRelevantSources);
+            await cache.SetAsync(key, empty, CacheTtl, ct);
+            return empty;
+        }
 
-        var response = new AssistResponse(answer, relevant);
-        // Solo cacheamos respuestas generadas: "sin artículos" puede deberse a un fallo de embeddings
-        if (answer is not null)
-            await cache.SetAsync(key, response, CacheTtl, ct);
+        // 3. Redacción: si la IA falla, devolvemos las fuentes sin respuesta y sin cachear
+        string? answer;
+        try
+        {
+            answer = await answers.GenerateAsync(ticket.Title, ticket.Description, relevant, ct);
+        }
+        catch (AiUnavailableException)
+        {
+            return new AssistResponse(null, relevant, AnswerStatus.Unavailable);
+        }
+
+        if (answer is null)
+            return new AssistResponse(null, relevant, AnswerStatus.Unavailable);
+
+        var response = new AssistResponse(answer, relevant, AnswerStatus.Generated);
+        await cache.SetAsync(key, response, CacheTtl, ct);
         return response;
     }
 }
-
-
-

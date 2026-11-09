@@ -14,7 +14,6 @@ internal sealed class LlmAnswerGenerator(IChatClient chat, ILogger<LlmAnswerGene
 
         var messages = new List<ChatMessage>
         {
-            // Instrucciones del sistema: separadas del texto del usuario
             new(ChatRole.System, """
                 Eres un agente de soporte técnico. Redacta una respuesta breve (máximo 5 frases) en español para el usuario.
                 Usa ÚNICAMENTE la información de los artículos proporcionados y cita su número entre corchetes, por ejemplo [1].
@@ -41,8 +40,8 @@ internal sealed class LlmAnswerGenerator(IChatClient chat, ILogger<LlmAnswerGene
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {
-            logger.LogWarning(ex, "No se pudo generar la respuesta sugerida.");
-            return null;
+            logger.LogWarning(ex, "La IA no pudo redactar la respuesta.");
+            throw new AiUnavailableException("La IA no está disponible para redactar la respuesta.", ex);
         }
     }
 }
