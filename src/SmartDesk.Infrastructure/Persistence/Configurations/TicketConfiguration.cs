@@ -29,7 +29,8 @@ internal sealed class TicketConfiguration : IEntityTypeConfiguration<Ticket>
                .HasMaxLength(Ticket.CreatedByMaxLength)
                .IsRequired();
 
-        builder.HasIndex(t => t.Status);     // listados por estado
-        builder.HasIndex(t => t.CreatedBy);  // "mis tickets": la consulta más frecuente de un usuario
+        builder.HasIndex(t => t.Status);                        // filtro por estado
+        builder.HasIndex(t => t.CreatedAt);                     // orden de la vista de agente
+        builder.HasIndex(t => new { t.CreatedBy, t.CreatedAt }); // "mis tickets" ordenados por fecha
     }
 }

@@ -90,9 +90,11 @@ namespace SmartDesk.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedBy");
+                    b.HasIndex("CreatedAt");
 
                     b.HasIndex("Status");
+
+                    b.HasIndex("CreatedBy", "CreatedAt");
 
                     b.ToTable("tickets", (string)null);
                 });

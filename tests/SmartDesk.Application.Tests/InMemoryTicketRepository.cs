@@ -20,6 +20,20 @@ internal sealed class InMemoryTicketRepository : ITicketRepository
             .Where(t => createdBy is null || t.CreatedBy == createdBy)
             .ToList());
 
+    public Task<(IReadOnlyList<Ticket> Items, int TotalCount)> PageAsync(
+        TicketStatus? status, string? createdBy, int page, int pageSize, CancellationToken ct)
+    {
+        var filtered = Items
+            .Where(t => status is null || t.Status == status)
+            .Where(t => createdBy is null || t.CreatedBy == createdBy)
+            .OrderByDescending(t => t.CreatedAt)
+            .ThenByDescending(t => t.Id)
+            .ToList();
+
+        var page_ = filtered.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+        return Task.FromResult<(IReadOnlyList<Ticket> Items, int TotalCount)>((page_, filtered.Count));
+    }
+
     public Task SaveChangesAsync(CancellationToken ct)
     {
         SaveCount++;

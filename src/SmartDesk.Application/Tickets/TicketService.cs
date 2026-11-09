@@ -35,6 +35,13 @@ public sealed class TicketService(
         return tickets.Select(TicketDto.FromEntity).ToList();
     }
 
+    /// <summary>Página de tickets visibles para el usuario actual. Los límites se validan en la API.</summary>
+    public async Task<PagedResult<TicketDto>> PageAsync(TicketStatus? status, int page, int pageSize, CancellationToken ct)
+    {
+        var (items, total) = await repository.PageAsync(status, user.IsAgent ? null : user.Id, page, pageSize, ct);
+        return new PagedResult<TicketDto>(items.Select(TicketDto.FromEntity).ToList(), page, pageSize, total);
+    }
+
     public Task<TicketDto?> StartAsync(Guid id, CancellationToken ct) =>
         ChangeAsync(id, t => t.StartProgress(), ct);
 

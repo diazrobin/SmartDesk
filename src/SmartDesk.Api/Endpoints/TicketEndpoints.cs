@@ -27,8 +27,24 @@ public static class TicketEndpoints
             return TypedResults.Created($"/api/tickets/{ticket.Id}", ticket);
         });
 
-        group.MapGet("/", async (TicketStatus? status, TicketService service, CancellationToken ct) =>
-            TypedResults.Ok(await service.ListAsync(status, ct)));
+        // Listado paginado: ?status=&page=&pageSize=  (por defecto página 1, 20 elementos)
+        group.MapGet("/", async Task<Results<Ok<PagedResult<TicketDto>>, ValidationProblem>> (
+            TicketStatus? status, int? page, int? pageSize, TicketService service, CancellationToken ct) =>
+        {
+            var currentPage = page ?? 1;
+            var size = pageSize ?? PageLimits.DefaultSize;
+
+            var errors = new Dictionary<string, string[]>();
+            if (currentPage < 1 || currentPage > PageLimits.MaxPage)
+                errors["page"] = [$"page debe estar entre 1 y {PageLimits.MaxPage}."];
+            if (size < 1 || size > PageLimits.MaxSize)
+                errors["pageSize"] = [$"pageSize debe estar entre 1 y {PageLimits.MaxSize}."];
+
+            if (errors.Count > 0)
+                return TypedResults.ValidationProblem(errors);
+
+            return TypedResults.Ok(await service.PageAsync(status, currentPage, size, ct));
+        });
 
         group.MapGet("/{id:guid}", async Task<Results<Ok<TicketDto>, NotFound>> (
             Guid id, TicketService service, CancellationToken ct) =>
