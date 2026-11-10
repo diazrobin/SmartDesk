@@ -1,4 +1,6 @@
-﻿using SmartDesk.Api.Endpoints;
+﻿using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using SmartDesk.Api.Endpoints;
 using SmartDesk.Api.Errors;
 using SmartDesk.Api.Security;
 using SmartDesk.Application;
@@ -13,6 +15,9 @@ var connectionString = builder.Configuration.GetConnectionString("SmartDesk")
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(connectionString, builder.Configuration.GetSection("Ai"));
 builder.Services.AddAnswerCache(builder.Configuration.GetConnectionString("Redis"));
+
+// Health checks: readiness depende solo de la base de datos
+builder.Services.AddHealthChecks().AddSmartDeskChecks();
 
 // Usuario actual: Application solo ve la interfaz; aquí se conecta con el token JWT
 builder.Services.AddHttpContextAccessor();
@@ -48,5 +53,8 @@ app.MapGet("/", () => "SmartDesk API en marcha");
 app.MapTicketEndpoints();
 app.MapKnowledgeEndpoints();
 
-app.Run();
+// Health checks sin autenticación, para Docker y balanceadores
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") }).AllowAnonymous();
 
+app.Run();
