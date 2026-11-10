@@ -1,0 +1,52 @@
+﻿name: smartdesk
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: smartdesk
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env}
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d smartdesk"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      ConnectionStrings__SmartDesk: "Host=postgres;Port=5432;Database=smartdesk;Username=postgres;Password=${POSTGRES_PASSWORD}"
+      ConnectionStrings__Redis: "redis:6379"
+      Ai__Endpoint: ${AI_ENDPOINT}
+      Ai__Model: ${AI_MODEL}
+      Ai__ApiKey: ${AI_API_KEY}
+      Authentication__Schemes__Bearer__ValidIssuer: ${JWT_ISSUER}
+      Authentication__Schemes__Bearer__ValidAudiences__0: "http://localhost:5018"
+      Authentication__Schemes__Bearer__ValidAudiences__1: "https://localhost:7095"
+      Authentication__Schemes__Bearer__SigningKeys__0__Id: ${JWT_KEY_ID}
+      Authentication__Schemes__Bearer__SigningKeys__0__Issuer: ${JWT_ISSUER}
+      Authentication__Schemes__Bearer__SigningKeys__0__Length: ${JWT_KEY_LENGTH}
+      Authentication__Schemes__Bearer__SigningKeys__0__Value: ${JWT_KEY_VALUE}
+
+volumes:
+  pgdata:
