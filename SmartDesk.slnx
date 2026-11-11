@@ -8,5 +8,6 @@
   <Folder Name="/tests/">
     <Project Path="tests/SmartDesk.Application.Tests/SmartDesk.Application.Tests.csproj" />
     <Project Path="tests/SmartDesk.Domain.Tests/SmartDesk.Domain.Tests.csproj" />
+    <Project Path="tests/SmartDesk.Integration.Tests/SmartDesk.Integration.Tests.csproj" />
   </Folder>
 </Solution>
