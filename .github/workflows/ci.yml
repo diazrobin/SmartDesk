@@ -1,0 +1,60 @@
+﻿name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restaurar dependencias
+        run: dotnet restore
+
+      - name: Compilar
+        run: dotnet build --no-restore -c Release
+
+      - name: Ejecutar tests
+        run: dotnet test --no-build -c Release
+
+  docker:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Construir imagen
+        run: docker build -t smartdesk-api:ci .
+
+      - name: Arrancar contenedor
+        run: |
+          docker run -d --name api -p 8080:8080 \
+            -e "ConnectionStrings__SmartDesk=Host=localhost;Port=1;Database=x;Username=x;Password=x" \
+            smartdesk-api:ci
+
+      - name: Comprobar liveness
+        run: |
+          for i in $(seq 1 20); do
+            if curl -fsS http://localhost:8080/health/live; then
+              echo
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs api
+          exit 1
+
+      - name: Limpiar contenedor
+        if: always()
+        run: docker rm -f api || true
