@@ -18,6 +18,9 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 
+# Directorio de claves de DataProtection, propiedad del usuario no-root
+RUN mkdir -p /home/app/.aspnet/DataProtection-Keys && chown -R app:app /home/app/.aspnet
+
 # Escuchar en 8080 (sin privilegios) y ejecutar con el usuario no-root que trae la imagen
 ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production

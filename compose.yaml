@@ -47,6 +47,10 @@ services:
       Authentication__Schemes__Bearer__SigningKeys__0__Issuer: ${JWT_ISSUER}
       Authentication__Schemes__Bearer__SigningKeys__0__Length: ${JWT_KEY_LENGTH}
       Authentication__Schemes__Bearer__SigningKeys__0__Value: ${JWT_KEY_VALUE}
+      DataProtection__KeysPath: "/home/app/.aspnet/DataProtection-Keys"
+    volumes:
+      - dpkeys:/home/app/.aspnet/DataProtection-Keys
 
 volumes:
   pgdata:
+  dpkeys:

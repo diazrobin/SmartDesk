@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using SmartDesk.Api.Endpoints;
 using SmartDesk.Api.Errors;
@@ -18,6 +19,11 @@ builder.Services.AddAnswerCache(builder.Configuration.GetConnectionString("Redis
 
 // Health checks: readiness depende solo de la base de datos
 builder.Services.AddHealthChecks().AddSmartDeskChecks();
+
+// Claves de DataProtection persistentes: solo si se configura una ruta (p. ej. en Docker Compose)
+var keysPath = builder.Configuration["DataProtection:KeysPath"];
+if (!string.IsNullOrWhiteSpace(keysPath))
+    builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(keysPath));
 
 // Usuario actual: Application solo ve la interfaz; aquí se conecta con el token JWT
 builder.Services.AddHttpContextAccessor();
