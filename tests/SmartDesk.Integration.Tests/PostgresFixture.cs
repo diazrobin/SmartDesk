@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Pgvector.EntityFrameworkCore;
 using SmartDesk.Infrastructure.Persistence;
 using Testcontainers.PostgreSql;
@@ -8,8 +8,7 @@ namespace SmartDesk.Integration.Tests;
 /// <summary>Levanta PostgreSQL con pgvector una vez para todos los tests y aplica las migraciones reales.</summary>
 public sealed class PostgresFixture : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder()
-        .WithImage("pgvector/pgvector:pg17")
+    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("pgvector/pgvector:pg17")
         .Build();
 
     public async Task InitializeAsync()
