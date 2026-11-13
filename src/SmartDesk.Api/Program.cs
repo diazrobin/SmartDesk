@@ -1,3 +1,4 @@
+using SmartDesk.Api.Observability;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -9,6 +10,8 @@ using SmartDesk.Application.Abstractions;
 using SmartDesk.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddSmartDeskTelemetry();
 
 var connectionString = builder.Configuration.GetConnectionString("SmartDesk")
     ?? throw new InvalidOperationException("Falta la cadena de conexión 'SmartDesk'.");
