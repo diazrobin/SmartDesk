@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Serialization;
 using SmartDesk.Application.Abstractions;
@@ -49,9 +49,8 @@ public sealed class AssistanceService(TicketService tickets, IKnowledgeBase know
         // 2. Sin contexto fiable no llamamos a la IA: evitamos respuestas inventadas
         if (relevant.Count == 0)
         {
-            var empty = new AssistResponse(null, relevant, AnswerStatus.NoRelevantSources);
-            await cache.SetAsync(key, empty, CacheTtl, ct);
-            return empty;
+            // No se cachea: un artículo nuevo debe aparecer en la siguiente consulta
+            return new AssistResponse(null, relevant, AnswerStatus.NoRelevantSources);
         }
 
         // 3. Redacción: si la IA falla, devolvemos las fuentes sin respuesta y sin cachear
