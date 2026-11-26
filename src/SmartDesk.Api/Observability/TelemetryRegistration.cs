@@ -13,9 +13,9 @@ public static class TelemetryRegistration
         builder.Services.AddOpenTelemetry()
             .ConfigureResource(resource => resource.AddService(ServiceName))
             .WithTracing(tracing => tracing
-                .AddSource("Microsoft.EntityFrameworkCore") // consultas SQL de EF Core
                 .AddAspNetCoreInstrumentation()             // una traza por petición HTTP
                 .AddHttpClientInstrumentation()             // llamadas salientes (Gemini)
+                .AddEntityFrameworkCoreInstrumentation()    // consultas SQL de EF Core
                 .AddOtlpExporter());                        // envío por OTLP
 
         return builder;
