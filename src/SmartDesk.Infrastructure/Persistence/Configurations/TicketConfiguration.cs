@@ -25,6 +25,13 @@ internal sealed class TicketConfiguration : IEntityTypeConfiguration<Ticket>
 
         builder.Property(t => t.Category).HasMaxLength(100);
 
+        // Por defecto "Classified": las filas existentes ya tienen clasificación y no deben reprocesarse
+        builder.Property(t => t.Classification)
+               .HasConversion<string>()
+               .HasMaxLength(20)
+               .HasDefaultValue(ClassificationStatus.Classified);
+        builder.Property(t => t.ClassificationAttempts).HasDefaultValue(0);
+
         builder.Property(t => t.CreatedBy)
                .HasMaxLength(Ticket.CreatedByMaxLength)
                .IsRequired();
@@ -32,5 +39,6 @@ internal sealed class TicketConfiguration : IEntityTypeConfiguration<Ticket>
         builder.HasIndex(t => t.Status);                        // filtro por estado
         builder.HasIndex(t => t.CreatedAt);                     // orden de la vista de agente
         builder.HasIndex(t => new { t.CreatedBy, t.CreatedAt }); // "mis tickets" ordenados por fecha
+        builder.HasIndex(t => t.Classification);                // el worker busca los pendientes
     }
 }

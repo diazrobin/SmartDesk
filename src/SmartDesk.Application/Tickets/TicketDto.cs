@@ -10,11 +10,12 @@ public sealed record TicketDto(
     string Status,
     string Priority,
     string? Category,
+    string Classification,
     string CreatedBy,
     DateTimeOffset CreatedAt,
     DateTimeOffset? ResolvedAt)
 {
     public static TicketDto FromEntity(Ticket t) => new(
         t.Id, t.Title, t.Description, t.Status.ToString(), t.Priority.ToString(),
-        t.Category, t.CreatedBy, t.CreatedAt, t.ResolvedAt);
+        t.Category, t.Classification.ToString(), t.CreatedBy, t.CreatedAt, t.ResolvedAt);
 }

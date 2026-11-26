@@ -17,6 +17,8 @@ public sealed class Ticket
     public TicketStatus Status { get; private set; }
     public TicketPriority Priority { get; private set; }
     public string? Category { get; private set; }
+    public ClassificationStatus Classification { get; private set; }
+    public int ClassificationAttempts { get; private set; }
     public string CreatedBy { get; private set; } = string.Empty;
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset? ResolvedAt { get; private set; }
@@ -39,12 +41,13 @@ public sealed class Ticket
             Description = description.Trim(),
             Status = TicketStatus.Open,
             Priority = TicketPriority.Unassigned,
+            Classification = ClassificationStatus.Pending,
             CreatedBy = createdBy.Trim(),
             CreatedAt = clock.GetUtcNow()
         };
     }
 
-    /// <summary>Lo usará el clasificador de IA en la fase 5.</summary>
+    /// <summary>Aplica la clasificación sugerida por la IA y la marca como clasificada.</summary>
     public void Classify(string category, TicketPriority priority)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(category);
@@ -53,6 +56,19 @@ public sealed class Ticket
 
         Category = category.Trim();
         Priority = priority;
+        Classification = ClassificationStatus.Classified;
+    }
+
+    /// <summary>Registra un intento de clasificación fallido. Tras maxAttempts, el ticket queda en Failed.</summary>
+    public void RecordClassificationFailure(int maxAttempts)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxAttempts, 1);
+        if (Classification != ClassificationStatus.Pending)
+            throw new DomainException("Solo un ticket pendiente puede registrar fallos de clasificación.");
+
+        ClassificationAttempts++;
+        if (ClassificationAttempts >= maxAttempts)
+            Classification = ClassificationStatus.Failed;
     }
 
     public void StartProgress()
