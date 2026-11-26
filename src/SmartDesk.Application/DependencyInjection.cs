@@ -9,6 +9,7 @@ public static class DependencyInjection
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         services.AddScoped<TicketService>();
+        services.AddScoped<PendingClassificationProcessor>();
         services.AddScoped<AssistanceService>();
         return services;
     }

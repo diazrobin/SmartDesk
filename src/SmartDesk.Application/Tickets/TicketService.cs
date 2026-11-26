@@ -3,21 +3,16 @@ using SmartDesk.Domain.Tickets;
 
 namespace SmartDesk.Application.Tickets;
 
-/// <summary>Casos de uso de tickets: orquesta dominio, persistencia, clasificación y visibilidad por usuario.</summary>
+/// <summary>Casos de uso de tickets: orquesta dominio, persistencia y visibilidad. La clasificación es asíncrona.</summary>
 public sealed class TicketService(
     ITicketRepository repository,
     ICurrentUser user,
-    ITicketClassifier classifier,
     TimeProvider clock)
 {
     public async Task<TicketDto> CreateAsync(string title, string description, CancellationToken ct)
     {
+        // El ticket nace Pending: PendingClassificationProcessor lo clasifica en segundo plano
         var ticket = Ticket.Create(title, description, user.Id, clock);
-
-        // La clasificación es una sugerencia: el dominio sigue validando sus reglas en Classify()
-        var suggestion = await classifier.ClassifyAsync(ticket.Title, ticket.Description, ct);
-        ticket.Classify(suggestion.Category, suggestion.Priority);
-
         repository.Add(ticket);
         await repository.SaveChangesAsync(ct);
         return TicketDto.FromEntity(ticket);

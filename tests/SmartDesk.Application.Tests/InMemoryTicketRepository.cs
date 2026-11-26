@@ -1,4 +1,4 @@
-﻿using SmartDesk.Application.Abstractions;
+using SmartDesk.Application.Abstractions;
 using SmartDesk.Domain.Tickets;
 
 namespace SmartDesk.Application.Tests;
@@ -28,6 +28,12 @@ internal sealed class InMemoryTicketRepository : ITicketRepository
         return Task.FromResult<(IReadOnlyList<Ticket> Items, int TotalCount)>((pagina, filtered.Count));
     }
 
+    public Task<IReadOnlyList<Ticket>> GetPendingClassificationAsync(int take, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<Ticket>>(Items
+            .Where(t => t.Classification == ClassificationStatus.Pending)
+            .OrderBy(t => t.CreatedAt)
+            .Take(take)
+            .ToList());
     public Task SaveChangesAsync(CancellationToken ct)
     {
         SaveCount++;

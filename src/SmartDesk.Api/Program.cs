@@ -1,3 +1,4 @@
+using SmartDesk.Api.Classification;
 using SmartDesk.Api.Observability;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -17,6 +18,7 @@ var connectionString = builder.Configuration.GetConnectionString("SmartDesk")
     ?? throw new InvalidOperationException("Falta la cadena de conexión 'SmartDesk'.");
 
 builder.Services.AddApplication();
+builder.Services.AddHostedService<PendingClassificationWorker>();
 builder.Services.AddInfrastructure(connectionString, builder.Configuration.GetSection("Ai"));
 builder.Services.AddAnswerCache(builder.Configuration.GetConnectionString("Redis"));
 

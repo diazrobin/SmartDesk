@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SmartDesk.Application.Abstractions;
 using SmartDesk.Domain.Tickets;
 
@@ -38,5 +38,11 @@ internal sealed class TicketRepository(SmartDeskDbContext db) : ITicketRepositor
         return (items, total);
     }
 
+    public async Task<IReadOnlyList<Ticket>> GetPendingClassificationAsync(int take, CancellationToken ct) =>
+        await db.Tickets
+            .Where(t => t.Classification == ClassificationStatus.Pending)
+            .OrderBy(t => t.CreatedAt)
+            .Take(take)
+            .ToListAsync(ct);
     public Task SaveChangesAsync(CancellationToken ct) => db.SaveChangesAsync(ct);
 }

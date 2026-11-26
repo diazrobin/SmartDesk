@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Time.Testing;
+using Microsoft.Extensions.Time.Testing;
 using SmartDesk.Application.Tickets;
 using SmartDesk.Domain.Tickets;
 
@@ -9,7 +9,7 @@ public class TicketPagingTests
     private static (TicketService Service, FakeTimeProvider Clock) Create(InMemoryTicketRepository repo, string user, bool isAgent)
     {
         var clock = new FakeTimeProvider();
-        var service = new TicketService(repo, new FakeCurrentUser(user, isAgent), new FakeTicketClassifier(), clock);
+        var service = new TicketService(repo, new FakeCurrentUser(user, isAgent), clock);
         return (service, clock);
     }
 

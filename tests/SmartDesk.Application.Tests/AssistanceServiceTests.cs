@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Time.Testing;
+using Microsoft.Extensions.Time.Testing;
 using SmartDesk.Application.Abstractions;
 using SmartDesk.Application.Assistance;
 using SmartDesk.Application.Knowledge;
@@ -78,7 +78,7 @@ public class AssistanceServiceTests
     {
         var tickets = new TicketService(
             new InMemoryTicketRepository(), new FakeCurrentUser("ana", IsAgent: false),
-            new FakeTicketClassifier(), new FakeTimeProvider());
+            new FakeTimeProvider());
         var ticket = await tickets.CreateAsync("VPN", "Error 809", CancellationToken.None);
         return (new AssistanceService(tickets, kb, gen, cache ?? new MemoryAssistCache()), ticket.Id);
     }

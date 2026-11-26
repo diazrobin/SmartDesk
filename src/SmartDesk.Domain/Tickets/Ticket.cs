@@ -1,4 +1,4 @@
-﻿using SmartDesk.Domain.Common;
+using SmartDesk.Domain.Common;
 
 namespace SmartDesk.Domain.Tickets;
 
@@ -71,6 +71,13 @@ public sealed class Ticket
             Classification = ClassificationStatus.Failed;
     }
 
+    /// <summary>Renuncia a clasificar un ticket pendiente (p. ej. ya resuelto). Queda en Failed.</summary>
+    public void AbandonClassification()
+    {
+        if (Classification != ClassificationStatus.Pending)
+            throw new DomainException("Solo un ticket pendiente puede abandonar la clasificación.");
+        Classification = ClassificationStatus.Failed;
+    }
     public void StartProgress()
     {
         if (Status != TicketStatus.Open)

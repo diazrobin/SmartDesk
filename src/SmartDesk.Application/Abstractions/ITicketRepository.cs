@@ -13,5 +13,8 @@ public interface ITicketRepository
     Task<(IReadOnlyList<Ticket> Items, int TotalCount)> PageAsync(
         TicketStatus? status, string? createdBy, int page, int pageSize, CancellationToken ct);
 
+    /// <summary>Tickets pendientes de clasificar, los más antiguos primero.</summary>
+    Task<IReadOnlyList<Ticket>> GetPendingClassificationAsync(int take, CancellationToken ct);
+
     Task SaveChangesAsync(CancellationToken ct);
 }

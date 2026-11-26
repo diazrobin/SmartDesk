@@ -6,17 +6,18 @@ namespace SmartDesk.Application.Tests;
 public class TicketClassificationTests
 {
     [Fact]
-    public async Task CreateAsync_AplicaLaClasificacionSugerida()
+    public async Task CreateAsync_DejaElTicketPendienteDeClasificar()
     {
         var service = new TicketService(
             new InMemoryTicketRepository(),
             new FakeCurrentUser("ana", IsAgent: false),
-            new FakeTicketClassifier(),
             new FakeTimeProvider());
 
         var dto = await service.CreateAsync("Pantalla", "No enciende", CancellationToken.None);
 
-        Assert.Equal("Hardware", dto.Category);
-        Assert.Equal("High", dto.Priority);
+        // La clasificación ocurre después, en PendingClassificationProcessor (worker)
+        Assert.Equal("Pending", dto.Classification);
+        Assert.Null(dto.Category);
+        Assert.Equal("Unassigned", dto.Priority);
     }
 }
