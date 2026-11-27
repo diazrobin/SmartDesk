@@ -1,4 +1,4 @@
-﻿using System.ClientModel;
+using System.ClientModel;
 using System.ClientModel.Primitives;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddDbContext<SmartDeskDbContext>(options =>
             options.UseNpgsql(connectionString, npgsql => npgsql.UseVector()));
         services.AddScoped<ITicketRepository, TicketRepository>();
+        services.AddScoped<IClassificationLock, PostgresClassificationLock>();
         services.AddScoped<IKnowledgeBase, PgKnowledgeBase>();
         services.AddSingleton(TimeProvider.System);
 

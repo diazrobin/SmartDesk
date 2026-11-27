@@ -1,8 +1,10 @@
-﻿using SmartDesk.Application.Tickets;
+﻿using SmartDesk.Application.Abstractions;
+using SmartDesk.Application.Tickets;
 
 namespace SmartDesk.Api.Classification;
 
-/// <summary>Clasifica en segundo plano los tickets pendientes. Cada ciclo usa su propio ámbito (y su DbContext).</summary>
+/// <summary>Clasifica en segundo plano los tickets pendientes. Cada ciclo usa su propio ámbito y solo procesa
+/// si obtiene el bloqueo, para que varias instancias de la API no clasifiquen el mismo ticket.</summary>
 public sealed class PendingClassificationWorker(
     IServiceScopeFactory scopes,
     ILogger<PendingClassificationWorker> logger) : BackgroundService
@@ -19,6 +21,13 @@ public sealed class PendingClassificationWorker(
             try
             {
                 await using var scope = scopes.CreateAsyncScope();
+
+                // Otra instancia tiene el bloqueo: saltamos este ciclo
+                await using var permiso = await scope.ServiceProvider
+                    .GetRequiredService<IClassificationLock>()
+                    .TryAcquireAsync(stoppingToken);
+                if (permiso is null) continue;
+
                 var processor = scope.ServiceProvider.GetRequiredService<PendingClassificationProcessor>();
                 var procesados = await processor.ProcessBatchAsync(BatchSize, stoppingToken);
 
