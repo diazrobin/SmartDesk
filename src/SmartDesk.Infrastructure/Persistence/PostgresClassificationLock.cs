@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using SmartDesk.Application.Abstractions;
 
@@ -16,7 +16,7 @@ internal sealed class PostgresClassificationLock(SmartDeskDbContext db) : IClass
         var tx = await db.Database.BeginTransactionAsync(ct);
 
         var obtenido = await db.Database
-            .SqlQuery<bool>($"SELECT pg_try_advisory_xact_lock({LockKey})")
+            .SqlQuery<bool>($"SELECT pg_try_advisory_xact_lock({LockKey}) AS \"Value\"")
             .SingleAsync(ct);
 
         if (obtenido) return new Lease(tx);
