@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Time.Testing;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using SmartDesk.Application.Abstractions;
 using SmartDesk.Application.Tickets;
 using SmartDesk.Domain.Tickets;
@@ -21,7 +22,7 @@ public class PendingClassificationProcessorTests
     public async Task ProcessBatch_ClasificaLosPendientes()
     {
         var ticket = NuevoPendiente("Impresora");
-        var processor = new PendingClassificationProcessor(_repo, new ClasificadorOk());
+        var processor = new PendingClassificationProcessor(_repo, new ClasificadorOk(), NullLogger<PendingClassificationProcessor>.Instance);
 
         var procesados = await processor.ProcessBatchAsync(10, CancellationToken.None);
 
@@ -34,7 +35,7 @@ public class PendingClassificationProcessorTests
     public async Task ProcessBatch_FallosRepetidos_LlevanAFailedTrasTresIntentos()
     {
         var ticket = NuevoPendiente("Impresora");
-        var processor = new PendingClassificationProcessor(_repo, new ClasificadorFallido());
+        var processor = new PendingClassificationProcessor(_repo, new ClasificadorFallido(), NullLogger<PendingClassificationProcessor>.Instance);
 
         await processor.ProcessBatchAsync(10, CancellationToken.None);
         await processor.ProcessBatchAsync(10, CancellationToken.None);
@@ -52,7 +53,7 @@ public class PendingClassificationProcessorTests
         ticket.StartProgress();
         ticket.Resolve(_clock);
         var clasificador = new ClasificadorOk();
-        var processor = new PendingClassificationProcessor(_repo, clasificador);
+        var processor = new PendingClassificationProcessor(_repo, clasificador, NullLogger<PendingClassificationProcessor>.Instance);
 
         await processor.ProcessBatchAsync(10, CancellationToken.None);
 
@@ -65,7 +66,7 @@ public class PendingClassificationProcessorTests
     {
         var ticket = NuevoPendiente("Impresora");
         ticket.Classify("Software", TicketPriority.Low);
-        var processor = new PendingClassificationProcessor(_repo, new ClasificadorOk());
+        var processor = new PendingClassificationProcessor(_repo, new ClasificadorOk(), NullLogger<PendingClassificationProcessor>.Instance);
 
         var procesados = await processor.ProcessBatchAsync(10, CancellationToken.None);
 
